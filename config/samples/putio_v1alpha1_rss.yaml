@@ -1,0 +1,6 @@
+apiVersion: putio.skynewz.dev/v1alpha1
+kind: Rss
+metadata:
+  name: rss-sample
+spec:
+  # TODO(user): Add fields here
