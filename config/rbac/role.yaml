@@ -1,0 +1,33 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - skynewz.dev
+  resources:
+  - feeds
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - skynewz.dev
+  resources:
+  - feeds/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - skynewz.dev
+  resources:
+  - feeds/status
+  verbs:
+  - get
+  - patch
+  - update

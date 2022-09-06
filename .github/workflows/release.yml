@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Make GitHub release
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.19
+          check-latest: true
+          cache: true
+
+      - name: Go build
+        run: make build VERSION=${{ github.ref_name }}
+
+      - name: Build Changelog
+        id: github_release
+        uses: mikepenz/release-changelog-builder-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release
+        uses: ncipollo/release-action@v1
+        id: release
+        with:
+          name: ${{ github.ref_name }}
+          artifacts: "bin/manager"
+          allowUpdates: true
+          body: ${{steps.github_release.outputs.changelog}}
+          token: ${{ secrets.WRITE_PACKAGES_TOKEN }}
+
+      - name: See release
+        run: echo ${{ steps.release.outputs.html_url }}

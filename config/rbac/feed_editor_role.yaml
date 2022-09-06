@@ -1,0 +1,24 @@
+# permissions for end users to edit feeds.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: feed-editor-role
+rules:
+- apiGroups:
+  - skynewz.dev
+  resources:
+  - feeds
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - skynewz.dev
+  resources:
+  - feeds/status
+  verbs:
+  - get

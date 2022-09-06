@@ -1,0 +1,99 @@
+name: Go
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "*" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    name: Ensure manifests are commit
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Generate manifests
+        run: make manifests
+
+      - name: Run code generation
+        run: make generate
+
+      - name: Verify modified files
+        uses: tj-actions/verify-changed-files@v11.1
+        id: verify-changed-files
+        with:
+          files: |
+            config/crd/bases/*.yaml
+            api
+            internal/putio/putio_generated.go
+
+      - name: Validate generated files
+        if: steps.verify-changed-files.outputs.files_changed == 'true'
+        run: |
+          echo "Changed files: ${{ steps.verify-changed-files.outputs.changed_files }}"
+          echo "Run 'make manifests generate && go generate ./...' and commit again'
+          exit 1
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    name: Go tests
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.19
+          check-latest: true
+          cache: true
+
+      - name: Run tests
+        run: make test
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    name: Kubernetes tests
+    steps:
+      - name: Setup kind
+        run: echo "Running integration tests"
+
+  lint:
+    runs-on: ubuntu-latest
+    name: Go lint
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.19
+          check-latest: true
+          cache: false # golangci/golangci-lint-action already do some caching
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v3
+
+  build:
+    runs-on: ubuntu-latest
+    name: Go build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.19
+          check-latest: true
+          cache: true
+
+      - name: Build
+        run: make build

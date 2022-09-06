@@ -1,0 +1,144 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.9.2
+  creationTimestamp: null
+  name: feeds.skynewz.dev
+spec:
+  group: skynewz.dev
+  names:
+    kind: Feed
+    listKind: FeedList
+    plural: feeds
+    singular: feed
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.keyword
+      name: Keyword
+      type: string
+    - jsonPath: .status.last_fetch
+      name: Last fetch
+      type: date
+    - jsonPath: .spec.paused
+      name: Paused
+      type: boolean
+    - jsonPath: .spec.title
+      name: Title
+      type: string
+    - jsonPath: .spec.rss_source_url
+      name: URL
+      priority: 1
+      type: string
+    - jsonPath: .status.id
+      name: ID
+      priority: 1
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Feed is the Schema to manage your rss feeds.
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: FeedSpec defines the desired state of Feed.
+            properties:
+              authSecretRef:
+                description: Authentication reference to Put.io token in a secret
+                properties:
+                  key:
+                    minLength: 1
+                    type: string
+                  name:
+                    minLength: 1
+                    type: string
+                required:
+                - key
+                - name
+                type: object
+              delete_old_files:
+                default: false
+                description: Should old files in the folder be deleted when space
+                  is low
+                type: boolean
+              dont_process_whole_feed:
+                default: false
+                description: Should the current items in the feed, at creation time,
+                  be ignored
+                type: boolean
+              keyword:
+                description: Only items with titles that contain any of these words
+                  will be transferred (comma-separated list of words)
+                minLength: 1
+                type: string
+              parent_dir_id:
+                default: 0
+                description: The file ID of the folder to place the RSS feed files
+                  in
+                format: int32
+                type: integer
+              paused:
+                default: false
+                description: Should the RSS feed be created in the paused state
+                type: boolean
+              rss_source_url:
+                description: The URL of the RSS feed to be watched
+                minLength: 1
+                type: string
+              title:
+                description: Title of the RSS feed as will appear on the site
+                minLength: 1
+                type: string
+              unwanted_keywords:
+                description: No items with titles that contain any of these words
+                  will be transferred (comma-separated list of words)
+                type: string
+            required:
+            - authSecretRef
+            - keyword
+            - rss_source_url
+            - title
+            type: object
+          status:
+            description: FeedStatus defines the observed state of Feed.
+            properties:
+              created_at:
+                format: date-time
+                type: string
+              failed_item_count:
+                type: integer
+              id:
+                type: integer
+              last_error:
+                type: string
+              last_fetch:
+                format: date-time
+                type: string
+              paused_at:
+                format: date-time
+                type: string
+              updated_at:
+                format: date-time
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
