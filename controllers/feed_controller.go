@@ -18,9 +18,10 @@ package controllers
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	skynewzdevv1alpha1 "github.com/SkYNewZ/putio-operator/api/v1alpha1"
@@ -29,6 +30,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -40,10 +42,9 @@ import (
 )
 
 const (
-	finalizerAnnotation string = "feed.skynewz.dev/finalizer"
-	checksumAnnotation  string = "feed.skynewz.dev/checksum"
-
-	titleSuffix string = " (managed by Kubernetes/putio-operator)"
+	// <wanted title>|generation|managed by Kubernetes/putio-operator
+	titleFormat    = "%s|%d|managed by Kubernetes/putio-operator"
+	titleSeparator = "|"
 )
 
 var tracer = otel.GetTracerProvider().Tracer("controller")
@@ -81,9 +82,10 @@ func (r *FeedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	r.Recorder.Event(k8sFeed, corev1.EventTypeNormal, eventReconciliationStarted, "starting reconciliation")
 
-	logger.Info("Setting up put.io client with instance secret")
+	logger.Info("Setting up put.io client with feed secret")
 	clientAuthSecret := &corev1.Secret{}
 	if err := r.Get(ctx, types.NamespacedName{Name: k8sFeed.AuthSecretRef().Name, Namespace: req.Namespace}, clientAuthSecret); err != nil {
+		span.RecordError(err)
 		r.Recorder.Eventf(k8sFeed, corev1.EventTypeWarning, eventUnableToGetAuthSecret, err.Error())
 		return ctrl.Result{}, fmt.Errorf("cannot get secret %q: %w", k8sFeed.AuthSecretRef().Name, err)
 	}
@@ -101,12 +103,13 @@ func (r *FeedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 				span.RecordError(err)
 				return ctrl.Result{}, err
 			}
-			r.Recorder.Event(k8sFeed, corev1.EventTypeNormal, eventAddedFinalizer, "instance finalizer added")
+			r.Recorder.Event(k8sFeed, corev1.EventTypeNormal, eventAddedFinalizer, "feed finalizer added")
 		}
 	} else {
 		// The object is being deleted
 		if controllerutil.ContainsFinalizer(k8sFeed, finalizerAnnotation) {
 			// our finalizer is present, so lets handle any external dependency
+			r.Recorder.Event(k8sFeed, corev1.EventTypeNormal, eventDeleteFeedAtPutio, "deleting feed at putio")
 			result, err := r.deleteFeed(ctx, k8sFeed, putioClient)
 			if err != nil {
 				// if fail to delete the external dependency here, return with error
@@ -131,27 +134,20 @@ func (r *FeedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, nil
 	}
 
+	r.Recorder.Event(k8sFeed, corev1.EventTypeNormal, eventCreateOrUpdatedAtPutio, "handling feed creation/update")
 	putioFeed, err := r.createOrUpdateFeed(ctx, k8sFeed, putioClient)
 	if err != nil {
 		r.Recorder.Event(k8sFeed, corev1.EventTypeWarning, eventUnableToCreateOrUpdatedAtPutio, err.Error())
-		span.RecordError(err)
 		return ctrl.Result{}, err
 	}
+	r.Recorder.Event(k8sFeed, corev1.EventTypeNormal, eventSuccessfullyCreateOrUpdatedAtPutio, "feed successfully created or updated")
 
-	r.Recorder.Event(k8sFeed, corev1.EventTypeNormal, eventCreateOrUpdatedAtPutio, "feed successfully created or updated")
-
-	// refresh resource after updates and update its status
-	k8sFeed = new(skynewzdevv1alpha1.Feed)
-	if err := r.Get(ctx, req.NamespacedName, k8sFeed); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
-
+	r.Recorder.Event(k8sFeed, corev1.EventTypeNormal, eventFeedStatus, "update feed status")
 	if err := r.updateFeedStatus(ctx, k8sFeed, putioFeed); err != nil {
 		r.Recorder.Event(k8sFeed, corev1.EventTypeWarning, eventUnableToUpdateFeedStatus, err.Error())
-		span.RecordError(err)
 		return ctrl.Result{}, err
 	}
-	r.Recorder.Event(k8sFeed, corev1.EventTypeNormal, eventFeedStatusSuccessfullyUpdated, "feed status updated successfully")
+	r.Recorder.Event(k8sFeed, corev1.EventTypeNormal, eventFeedStatusSuccessfullyUpdated, "feed status successfully set")
 
 	logger.Info("Feed successfully reconciled")
 	return ctrl.Result{}, nil
@@ -188,6 +184,8 @@ func (r *FeedReconciler) createOrUpdateFeed(ctx context.Context, feed *skynewzde
 	ctx, span := tracer.Start(ctx, "controllers.FeedReconciler.createOrUpdateFeed")
 	defer span.End()
 
+	span.SetAttributes(attribute.Int64("feed.generation", feed.GetGeneration()))
+
 	var (
 		logger    = log.FromContext(ctx)
 		putioFeed *putio.Feed
@@ -196,10 +194,11 @@ func (r *FeedReconciler) createOrUpdateFeed(ctx context.Context, feed *skynewzde
 
 	// search for existing feed
 	if feed.Status.ID != nil {
-		span.SetAttributes(attribute.Int("feed.status.id", int(*feed.Status.ID)))
-		logger.Info("Searching Put.io feed from status ID", "id", feed.Status.ID)
+		span.SetAttributes(attribute.Int("feed.id", int(*feed.Status.ID)))
+		logger.Info("Searching Put.io feed from status ID", "id", *feed.Status.ID)
 		putioFeed, err = putioClient.Rss.Get(ctx, *feed.Status.ID)
 		if err != nil && !putio.IsNotFound(err) {
+			span.RecordError(err)
 			return nil, fmt.Errorf("unable to read Put.io feed: %w", err)
 		}
 	}
@@ -210,100 +209,42 @@ func (r *FeedReconciler) createOrUpdateFeed(ctx context.Context, feed *skynewzde
 		logger.Info("Put.io feed not found, creating it", "title", feed.Spec.Title)
 
 		// TODO: refacto code for creation/update, this is the same
-		title := feed.Spec.Title + titleSuffix
-		putioFeed, err = putioClient.Rss.Create(ctx, &putio.Feed{
-			Title:                title,
-			RssSourceURL:         feed.Spec.RssSourceURL,
-			ParentDirID:          feed.Spec.ParentDirID,
-			DeleteOldFiles:       feed.Spec.DeleteOldFiles,
-			DontProcessWholeFeed: feed.Spec.DontProcessWholeFeed,
-			Keyword:              feed.Spec.Keyword,
-			UnwantedKeywords:     feed.Spec.UnwantedKeywords,
-		})
-
+		putioFeed, err = putioClient.Rss.Create(ctx, makePutioFeedFromSpec(ctx, feed))
 		if err != nil {
+			span.RecordError(err)
 			return nil, fmt.Errorf("unable to create feed to Put.io: %w", err)
 		}
 
 		span.SetAttributes(attribute.Int("feed.id", int(*putioFeed.ID)))
 
-		// update pause/unpause
-		switch feed.Spec.Paused {
-		case true:
-			err = putioClient.Rss.Pause(ctx, *putioFeed.ID)
-		case false:
-			err = putioClient.Rss.Resume(ctx, *putioFeed.ID)
-		}
-
-		if err != nil {
+		if err := r.setPauseStatus(ctx, putioClient, feed, *putioFeed.ID); err != nil {
+			span.RecordError(err)
 			return nil, fmt.Errorf("unable to update pause status to Put.io: %w", err)
-		}
-
-		// update checksum and update resource
-		r.insertChecksum(ctx, feed)
-		if err := r.Update(ctx, feed); err != nil {
-			return nil, fmt.Errorf("unable to update Feed resource: %w", err)
-		}
-
-		// get new values
-		// TODO: is really necessary ?
-		putioFeed, err = putioClient.Rss.Get(ctx, *putioFeed.ID)
-		if err != nil {
-			return nil, fmt.Errorf("unable to refresh feed details from Put.io: %w", err)
 		}
 
 		logger.Info("Put.io feed successfully created", "id", putioFeed.ID)
 		return putioFeed, nil
 	}
 
-	// feed exist, update it if needed
-	if r.feedNeedUpdate(ctx, feed) {
+	// feed found, updating it if not already at the latest version
+	if !isAlreadyProcessed(ctx, putioFeed, feed) {
 		span.SetAttributes(attribute.String("action", "update"))
-		span.SetAttributes(attribute.Int("feed.id", int(*putioFeed.ID)))
 		logger.Info("Put.io feed found, updating", "id", putioFeed.ID)
 
-		title := feed.Spec.Title + titleSuffix
-		if err := putioClient.Rss.Update(ctx, &putio.Feed{
-			Title:                title,
-			RssSourceURL:         feed.Spec.RssSourceURL,
-			ParentDirID:          feed.Spec.ParentDirID,
-			DeleteOldFiles:       feed.Spec.DeleteOldFiles,
-			DontProcessWholeFeed: feed.Spec.DontProcessWholeFeed,
-			Keyword:              feed.Spec.Keyword,
-			UnwantedKeywords:     feed.Spec.UnwantedKeywords,
-		}, *putioFeed.ID); err != nil {
+		if err := putioClient.Rss.Update(ctx, makePutioFeedFromSpec(ctx, feed), *putioFeed.ID); err != nil {
+			span.RecordError(err)
 			return nil, fmt.Errorf("unable to update feed to Put.io: %w", err)
 		}
 
-		// update pause/unpause
-		switch feed.Spec.Paused {
-		case true:
-			err = putioClient.Rss.Pause(ctx, *putioFeed.ID)
-		case false:
-			err = putioClient.Rss.Resume(ctx, *putioFeed.ID)
-		}
-
-		if err != nil {
+		if err := r.setPauseStatus(ctx, putioClient, feed, *putioFeed.ID); err != nil {
+			span.RecordError(err)
 			return nil, fmt.Errorf("unable to update pause status to Put.io: %w", err)
-		}
-
-		// get new values
-		// TODO: is really necessary ?
-		putioFeed, err = putioClient.Rss.Get(ctx, *putioFeed.ID)
-		if err != nil {
-			return nil, fmt.Errorf("unable to refresh feed details from Put.io: %w", err)
-		}
-
-		// update checksum and update resource
-		r.insertChecksum(ctx, feed)
-		if err := r.Update(ctx, feed); err != nil {
-			return nil, fmt.Errorf("unable to update Feed resource: %w", err)
 		}
 
 		return putioFeed, nil
 	}
 
-	logger.Info("Put.io feed found, no change on spec, nothing to do")
+	logger.Info("Feed up to date")
 	return putioFeed, nil
 }
 
@@ -315,57 +256,79 @@ func (r *FeedReconciler) updateFeedStatus(ctx context.Context, feed *skynewzdevv
 
 	// update status
 	logger.Info("Updating feed status")
-	feed.Status = skynewzdevv1alpha1.FeedStatus{
-		ID:              putioFeed.ID,
-		LastError:       putioFeed.LastError,
-		FailedItemCount: putioFeed.FailedItemCount,
-	}
+	feed.Status.ID = putioFeed.ID
 
-	if !putioFeed.LastFetch.IsZero() {
-		t := metav1.NewTime(putioFeed.LastFetch.GetTime())
-		feed.Status.LastFetch = &t
-	}
-
-	if !putioFeed.PausedAt.IsZero() {
-		t := metav1.NewTime(putioFeed.PausedAt.GetTime())
-		feed.Status.PausedAt = &t
-	}
-
-	if !putioFeed.CreatedAt.IsZero() {
-		t := metav1.NewTime(putioFeed.CreatedAt.GetTime())
-		feed.Status.CreatedAt = &t
-	}
-
-	if !putioFeed.UpdatedAt.IsZero() {
-		t := metav1.NewTime(putioFeed.UpdatedAt.GetTime())
-		feed.Status.UpdatedAt = &t
+	if putioFeed.LastError == "" {
+		meta.SetStatusCondition(&feed.Status.Conditions, makeFeedAvailableCondition(metav1.ConditionTrue, FeedSuccessfullyDeployed, ""))
+	} else {
+		meta.SetStatusCondition(&feed.Status.Conditions, makeFeedAvailableCondition(metav1.ConditionFalse, FeedFailedToDeploy, putioFeed.LastError))
 	}
 
 	return r.Client.Status().Update(ctx, feed)
 }
 
-func (r *FeedReconciler) feedNeedUpdate(ctx context.Context, feed *skynewzdevv1alpha1.Feed) bool {
-	_, span := tracer.Start(ctx, "controllers.FeedReconciler.feedNeedUpdate")
-	defer span.End()
-
-	data, _ := json.Marshal(feed.Spec) //nolint:errchkjson
-	checksum := Checksum(string(data))
-	return feed.Annotations[checksumAnnotation] != checksum
-}
-
-func (r *FeedReconciler) insertChecksum(ctx context.Context, feed *skynewzdevv1alpha1.Feed) {
-	_, span := tracer.Start(ctx, "controllers.FeedReconciler.insertChecksum")
-	defer span.End()
-
-	logger := log.FromContext(ctx)
-	logger.Info("Inserting checksum annotation")
-
-	data, _ := json.Marshal(feed.Spec) //nolint:errchkjson
-	checksum := Checksum(string(data))
-	feed.Annotations[checksumAnnotation] = checksum
-}
-
 func (r *FeedReconciler) makePutioClient(ctx context.Context, token string) *putio.Client {
+	ctx, span := tracer.Start(ctx, "controllers.FeedReconciler.makePutioClient")
+	defer span.End()
+
 	httpClient := http.NewHTTPClient(token)
 	return putio.New(ctx, httpClient)
+}
+
+func (r *FeedReconciler) setPauseStatus(ctx context.Context, putioClient *putio.Client, feed *skynewzdevv1alpha1.Feed, feedID uint) (err error) {
+	ctx, span := tracer.Start(ctx, "controllers.FeedReconciler.setPauseStatus")
+	defer span.End()
+
+	r.Recorder.Event(feed, corev1.EventTypeNormal, eventSetPauseStatus, "setting feed pause status")
+	switch feed.Spec.Paused {
+	case true:
+		err = putioClient.Rss.Pause(ctx, feedID)
+	case false:
+		err = putioClient.Rss.Resume(ctx, feedID)
+	}
+
+	if err != nil {
+		r.Recorder.Event(feed, corev1.EventTypeWarning, eventUnableToSetPauseStatus, err.Error())
+	} else {
+		r.Recorder.Event(feed, corev1.EventTypeNormal, eventSuccessfullySetPauseStatus, "feed pause status set")
+	}
+
+	return
+}
+
+// makeFeedTitleWithGenerationNumber to prevent infinite reconciliation, make a checksum of current spec
+// and place it into title
+func makeFeedTitleWithGenerationNumber(ctx context.Context, feed *skynewzdevv1alpha1.Feed) string {
+	ctx, span := tracer.Start(ctx, "controllers.makeFeedTitleWithGenerationNumber")
+	defer span.End()
+
+	return fmt.Sprintf(titleFormat, feed.Spec.Title, feed.GetGeneration())
+}
+
+func isAlreadyProcessed(ctx context.Context, putioFeed *putio.Feed, feed *skynewzdevv1alpha1.Feed) bool {
+	ctx, span := tracer.Start(ctx, "controllers.isAlreadyProcessed")
+	defer span.End()
+
+	// parse current title
+	parsed := strings.Split(putioFeed.Title, titleSeparator)
+	if len(parsed) != 3 {
+		return false
+	}
+
+	return parsed[1] == strconv.FormatInt(feed.GetGeneration(), 10)
+}
+
+func makePutioFeedFromSpec(ctx context.Context, feed *skynewzdevv1alpha1.Feed) *putio.Feed {
+	ctx, span := tracer.Start(ctx, "controllers.makePutioFeedFromSpec")
+	defer span.End()
+
+	return &putio.Feed{
+		Title:                makeFeedTitleWithGenerationNumber(ctx, feed),
+		RssSourceURL:         feed.Spec.RssSourceURL,
+		ParentDirID:          feed.Spec.ParentDirID,
+		DeleteOldFiles:       feed.Spec.DeleteOldFiles,
+		DontProcessWholeFeed: feed.Spec.DontProcessWholeFeed,
+		Keyword:              feed.Spec.Keyword,
+		UnwantedKeywords:     feed.Spec.UnwantedKeywords,
+	}
 }

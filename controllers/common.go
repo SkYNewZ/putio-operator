@@ -1,14 +1,10 @@
 package controllers
 
 import (
-	"fmt"
-	"hash/crc32"
-	"regexp"
-	"strings"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Allows for normalizing by collapsing newlines.
-var sequentialNewlines = regexp.MustCompile("(?:\r?\n)+")
+const finalizerAnnotation string = "feed.skynewz.dev/finalizer"
 
 const (
 	eventReconciliationStarted string = "ReconciliationStarted"
@@ -20,21 +16,44 @@ const (
 	eventUnableToDeleteFinalizer = "UnableToDeleteFinalizer"
 
 	// creation/update events
-	eventCreateOrUpdatedAtPutio         = "CreateOrUpdatedAtPutio"
-	eventUnableToCreateOrUpdatedAtPutio = "UnableToCreateOrUpdatedAtPutio"
+	eventCreateOrUpdatedAtPutio             = "CreateOrUpdatedAtPutio"
+	eventUnableToCreateOrUpdatedAtPutio     = "UnableToCreateOrUpdatedAtPutio"
+	eventSuccessfullyCreateOrUpdatedAtPutio = "SuccessfullyCreateOrUpdatedAtPutio"
 
 	// deletion event
+	eventDeleteFeedAtPutio          = "DeleteFeedAtPutio"
 	eventUnableToDeleteAtPutio      = "UnableToDeleteAtPutio"
 	eventSuccessfullyDeletedAtPutio = "SuccessfullyDeletedAtPutio"
 
+	// pause status update
+	eventSetPauseStatus             = "SetPauseStatus"
+	eventUnableToSetPauseStatus     = "UnableToSetPauseStatus"
+	eventSuccessfullySetPauseStatus = "SuccessfullySetPauseStatus"
+
 	// status update
+	eventFeedStatus                    = "FeedStatus"
 	eventUnableToUpdateFeedStatus      = "UnableToUpdateFeedStatus"
 	eventFeedStatusSuccessfullyUpdated = "FeedStatusSuccessfullyUpdated"
 )
 
-// Checksum generates a checksum for the given value to be compared against
-// a respective annotation.
-// Leading and trailing spaces are ignored.
-func Checksum(value string) string {
-	return fmt.Sprintf("%08x", crc32.ChecksumIEEE([]byte(sequentialNewlines.ReplaceAllString(strings.TrimSpace(value), `\n`))))
+type FeedConditionType string
+
+const (
+	FeedAvailable FeedConditionType = "Available"
+)
+
+type FeedConditionReason string
+
+const (
+	FeedSuccessfullyDeployed FeedConditionReason = "FeedSuccessfullyDeployed"
+	FeedFailedToDeploy       FeedConditionReason = "FeedFailedToDeploy"
+)
+
+func makeFeedAvailableCondition(status metav1.ConditionStatus, reason FeedConditionReason, message string) metav1.Condition {
+	return metav1.Condition{
+		Type:    string(FeedAvailable),
+		Status:  status,
+		Reason:  string(reason),
+		Message: message,
+	}
 }

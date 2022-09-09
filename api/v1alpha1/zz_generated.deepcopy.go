@@ -22,6 +22,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -128,21 +129,12 @@ func (in *FeedStatus) DeepCopyInto(out *FeedStatus) {
 		*out = new(uint)
 		**out = **in
 	}
-	if in.LastFetch != nil {
-		in, out := &in.LastFetch, &out.LastFetch
-		*out = (*in).DeepCopy()
-	}
-	if in.PausedAt != nil {
-		in, out := &in.PausedAt, &out.PausedAt
-		*out = (*in).DeepCopy()
-	}
-	if in.CreatedAt != nil {
-		in, out := &in.CreatedAt, &out.CreatedAt
-		*out = (*in).DeepCopy()
-	}
-	if in.UpdatedAt != nil {
-		in, out := &in.UpdatedAt, &out.UpdatedAt
-		*out = (*in).DeepCopy()
+	if in.Conditions != nil {
+		in, out := &in.Conditions, &out.Conditions
+		*out = make([]v1.Condition, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
 	}
 }
 

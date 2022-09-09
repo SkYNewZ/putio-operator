@@ -43,7 +43,7 @@ var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
 
-	serviceVersion = "dev" // TODO: change it using ldflags
+	serviceVersion = "dev"
 )
 
 const (

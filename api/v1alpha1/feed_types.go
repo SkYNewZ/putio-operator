@@ -70,24 +70,20 @@ type FeedSpec struct {
 type FeedStatus struct {
 	ID *uint `json:"id,omitempty"`
 
-	LastError       string       `json:"last_error,omitempty"`
-	LastFetch       *metav1.Time `json:"last_fetch,omitempty"`
-	FailedItemCount uint         `json:"failed_item_count,omitempty"`
-
-	PausedAt  *metav1.Time `json:"paused_at,omitempty"`
-	CreatedAt *metav1.Time `json:"created_at,omitempty"`
-	UpdatedAt *metav1.Time `json:"updated_at,omitempty"`
+	// Conditions represent the latest available observations of a Feed state
+	Conditions []metav1.Condition `json:"conditions"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Keyword",type=string,JSONPath=".spec.keyword"
-// +kubebuilder:printcolumn:name="Last fetch",type=date,JSONPath=".status.last_fetch"
 // +kubebuilder:printcolumn:name="Paused",type=boolean,JSONPath=".spec.paused"
-// +kubebuilder:printcolumn:name="Title",type=string,JSONPath=".spec.title"
-// +kubebuilder:printcolumn:name="URL",type=string,priority=1,JSONPath=".spec.rss_source_url"
-// +kubebuilder:printcolumn:name="ID",type=string,priority=1,JSONPath=".status.id"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
+// +kubebuilder:printcolumn:name="Available",type="string",JSONPath=`.status.conditions[?(@.type == "Available")].status`
+// +kubebuilder:printcolumn:name="ID",type=string,priority=1,JSONPath=".status.id"
+// +kubebuilder:printcolumn:name="URL",type=string,priority=1,JSONPath=".spec.rss_source_url"
+// +kubebuilder:printcolumn:name="Title",type=string,priority=1,JSONPath=".spec.title"
+// +kubebuilder:printcolumn:name="Last fetch",type=date,priority=1,JSONPath=".status.last_fetch"
 
 // Feed is the Schema to manage your rss feeds.
 type Feed struct {
