@@ -32,6 +32,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -50,12 +51,14 @@ var tracer = otel.GetTracerProvider().Tracer("controller")
 // FeedReconciler reconciles a Feed object.
 type FeedReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme   *runtime.Scheme
+	Recorder record.EventRecorder
 }
 
 //+kubebuilder:rbac:groups=skynewz.dev,resources=feeds,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=skynewz.dev,resources=feeds/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=skynewz.dev,resources=feeds/finalizers,verbs=update
+//+kubebuilder:rbac:groups=skynewz.dev,resources=events,verbs=create;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -76,9 +79,12 @@ func (r *FeedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	r.Recorder.Event(k8sFeed, corev1.EventTypeNormal, eventReconciliationStarted, "starting reconciliation")
+
 	logger.Info("Setting up put.io client with instance secret")
 	clientAuthSecret := &corev1.Secret{}
 	if err := r.Get(ctx, types.NamespacedName{Name: k8sFeed.AuthSecretRef().Name, Namespace: req.Namespace}, clientAuthSecret); err != nil {
+		r.Recorder.Eventf(k8sFeed, corev1.EventTypeWarning, eventUnableToGetAuthSecret, err.Error())
 		return ctrl.Result{}, fmt.Errorf("cannot get secret %q: %w", k8sFeed.AuthSecretRef().Name, err)
 	}
 	putioClient := r.makePutioClient(ctx, string(clientAuthSecret.Data[k8sFeed.AuthSecretRef().Key]))
@@ -91,9 +97,11 @@ func (r *FeedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		if !controllerutil.ContainsFinalizer(k8sFeed, finalizerAnnotation) {
 			controllerutil.AddFinalizer(k8sFeed, finalizerAnnotation)
 			if err := r.Update(ctx, k8sFeed); err != nil {
+				r.Recorder.Eventf(k8sFeed, corev1.EventTypeWarning, eventUnableToAddFinalizer, err.Error())
 				span.RecordError(err)
 				return ctrl.Result{}, err
 			}
+			r.Recorder.Event(k8sFeed, corev1.EventTypeNormal, eventAddedFinalizer, "instance finalizer added")
 		}
 	} else {
 		// The object is being deleted
@@ -103,13 +111,17 @@ func (r *FeedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			if err != nil {
 				// if fail to delete the external dependency here, return with error
 				// so that it can be retried
+				r.Recorder.Event(k8sFeed, corev1.EventTypeWarning, eventUnableToDeleteAtPutio, err.Error())
 				span.RecordError(err)
 				return result, err
 			}
 
+			r.Recorder.Event(k8sFeed, corev1.EventTypeNormal, eventSuccessfullyDeletedAtPutio, "feed successfully deleted")
+
 			// remove our finalizer from the list and update it.
 			controllerutil.RemoveFinalizer(k8sFeed, finalizerAnnotation)
 			if err := r.Update(ctx, k8sFeed); err != nil {
+				r.Recorder.Event(k8sFeed, corev1.EventTypeWarning, eventUnableToDeleteFinalizer, err.Error())
 				span.RecordError(err)
 				return ctrl.Result{}, err
 			}
@@ -121,9 +133,12 @@ func (r *FeedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	putioFeed, err := r.createOrUpdateFeed(ctx, k8sFeed, putioClient)
 	if err != nil {
+		r.Recorder.Event(k8sFeed, corev1.EventTypeWarning, eventUnableToCreateOrUpdatedAtPutio, err.Error())
 		span.RecordError(err)
 		return ctrl.Result{}, err
 	}
+
+	r.Recorder.Event(k8sFeed, corev1.EventTypeNormal, eventCreateOrUpdatedAtPutio, "feed successfully created or updated")
 
 	// refresh resource after updates and update its status
 	k8sFeed = new(skynewzdevv1alpha1.Feed)
@@ -132,9 +147,11 @@ func (r *FeedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	if err := r.updateFeedStatus(ctx, k8sFeed, putioFeed); err != nil {
+		r.Recorder.Event(k8sFeed, corev1.EventTypeWarning, eventUnableToUpdateFeedStatus, err.Error())
 		span.RecordError(err)
 		return ctrl.Result{}, err
 	}
+	r.Recorder.Event(k8sFeed, corev1.EventTypeNormal, eventFeedStatusSuccessfullyUpdated, "feed status updated successfully")
 
 	logger.Info("Feed successfully reconciled")
 	return ctrl.Result{}, nil

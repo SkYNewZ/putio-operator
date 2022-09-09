@@ -8,6 +8,13 @@ rules:
 - apiGroups:
   - skynewz.dev
   resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - skynewz.dev
+  resources:
   - feeds
   verbs:
   - create

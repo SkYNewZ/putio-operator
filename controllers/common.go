@@ -10,6 +10,28 @@ import (
 // Allows for normalizing by collapsing newlines.
 var sequentialNewlines = regexp.MustCompile("(?:\r?\n)+")
 
+const (
+	eventReconciliationStarted string = "ReconciliationStarted"
+	eventUnableToGetAuthSecret        = "UnableToGetAuthSecret"
+
+	// finalizer events
+	eventAddedFinalizer          = "InstanceFinalizerAdded"
+	eventUnableToAddFinalizer    = "UnableToAddFinalizer"
+	eventUnableToDeleteFinalizer = "UnableToDeleteFinalizer"
+
+	// creation/update events
+	eventCreateOrUpdatedAtPutio         = "CreateOrUpdatedAtPutio"
+	eventUnableToCreateOrUpdatedAtPutio = "UnableToCreateOrUpdatedAtPutio"
+
+	// deletion event
+	eventUnableToDeleteAtPutio      = "UnableToDeleteAtPutio"
+	eventSuccessfullyDeletedAtPutio = "SuccessfullyDeletedAtPutio"
+
+	// status update
+	eventUnableToUpdateFeedStatus      = "UnableToUpdateFeedStatus"
+	eventFeedStatusSuccessfullyUpdated = "FeedStatusSuccessfullyUpdated"
+)
+
 // Checksum generates a checksum for the given value to be compared against
 // a respective annotation.
 // Leading and trailing spaces are ignored.
