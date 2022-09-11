@@ -107,8 +107,5 @@ limitations under the License.
 
 ## TODOs
 
-- [ ] Write unit tests
 - [ ] Write integration tests
 - [ ] Run integrations tests in CI
-- [ ] Deploy operator from CI
-- [ ] Setup events

@@ -1,0 +1,22 @@
+{
+  "feed": {
+    "created_at": "2022-06-13T00:01:52",
+    "delete_old_files": false,
+    "extract": false,
+    "failed_item_count": 0,
+    "id": 125559,
+    "keyword": "FOR.ALL.MANKIND&S03&2160P&FRATERNITY",
+    "last_error": null,
+    "last_fetch": "2022-09-11T19:46:39",
+    "parent_dir_id": 998868232,
+    "parentdirid": 998868232,
+    "paused": false,
+    "paused_at": null,
+    "rss_source_url": "https://rss.site.fr",
+    "start_at": null,
+    "title": "For all mankind",
+    "unwanted_keywords": "",
+    "updated_at": "2022-09-11T19:46:39"
+  },
+  "status": "OK"
+}

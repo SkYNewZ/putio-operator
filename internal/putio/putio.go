@@ -45,15 +45,16 @@ func (s *rssService) List(ctx context.Context) ([]*Feed, error) {
 
 	req, err := s.client.NewRequest(ctx, http.MethodGet, "/v2/rss/list", nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("putio: cannot make request: %w", err)
 	}
+	*req = *req.WithContext(ctx)
 
 	var r struct {
 		Feeds []*Feed `json:"feeds"`
 	}
-	_, err = s.client.Do(req, &r)
+	_, err = s.client.Do(req, &r) //nolint:bodyclose,contextcheck
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("putio: response error: %w", err)
 	}
 
 	return r.Feeds, nil
@@ -68,15 +69,16 @@ func (s *rssService) Get(ctx context.Context, id uint) (*Feed, error) {
 
 	req, err := s.client.NewRequest(ctx, http.MethodGet, "/v2/rss/"+strconv.Itoa(int(id)), nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("putio: cannot make request: %w", err)
 	}
+	*req = *req.WithContext(ctx)
 
 	var r struct {
 		Feed *Feed `json:"feed"`
 	}
-	_, err = s.client.Do(req, &r)
+	_, err = s.client.Do(req, &r) //nolint:bodyclose,contextcheck
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("putio: response error: %w", err)
 	}
 
 	return r.Feed, nil
@@ -91,12 +93,13 @@ func (s *rssService) Delete(ctx context.Context, id uint) error {
 
 	req, err := s.client.NewRequest(ctx, http.MethodPost, fmt.Sprintf("/v2/rss/%d/delete", id), nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("putio: cannot make request: %w", err)
 	}
+	*req = *req.WithContext(ctx)
 
-	_, err = s.client.Do(req, nil)
+	_, err = s.client.Do(req, nil) //nolint:bodyclose,contextcheck
 	if err != nil {
-		return err
+		return fmt.Errorf("putio: response error: %w", err)
 	}
 	return nil
 }
@@ -124,16 +127,17 @@ func (s *rssService) Create(ctx context.Context, feed *Feed) (*Feed, error) {
 
 	req, err := s.client.NewRequest(ctx, http.MethodPost, "/v2/rss/create", strings.NewReader(params.Encode()))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("putio: cannot make request: %w", err)
 	}
+	*req = *req.WithContext(ctx)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	var r struct {
 		Feed *Feed `json:"feed"`
 	}
-	_, err = s.client.Do(req, &r)
+	_, err = s.client.Do(req, &r) //nolint:bodyclose,contextcheck
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("putio: response error: %w", err)
 	}
 
 	return r.Feed, nil
@@ -161,20 +165,21 @@ func (s *rssService) Update(ctx context.Context, feed *Feed, id uint) error {
 
 	req, err := s.client.NewRequest(ctx, http.MethodPost, fmt.Sprintf("/v2/rss/%d", id), strings.NewReader(params.Encode()))
 	if err != nil {
-		return err
+		return fmt.Errorf("putio: cannot make request: %w", err)
 	}
+	*req = *req.WithContext(ctx)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	var r struct {
 		Status string `json:"status"`
 	}
 
-	if _, err := s.client.Do(req, &r); err != nil {
-		return err
+	if _, err := s.client.Do(req, &r); err != nil { //nolint:bodyclose,contextcheck
+		return fmt.Errorf("putio: response error: %w", err)
 	}
 
 	if r.Status != "OK" {
-		return fmt.Errorf("put.io: invalid status received %q", r.Status)
+		return newErrInvalidStatusReceived(r.Status)
 	}
 
 	return nil
@@ -189,19 +194,20 @@ func (s *rssService) Pause(ctx context.Context, id uint) error {
 
 	req, err := s.client.NewRequest(ctx, http.MethodPost, fmt.Sprintf("/v2/rss/%d/pause", id), nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("putio: cannot make request: %w", err)
 	}
+	*req = *req.WithContext(ctx)
 
 	var r struct {
 		Status string `json:"status"`
 	}
 
-	if _, err := s.client.Do(req, &r); err != nil {
-		return err
+	if _, err := s.client.Do(req, &r); err != nil { //nolint:bodyclose,contextcheck
+		return fmt.Errorf("putio: response error: %w", err)
 	}
 
 	if r.Status != "OK" {
-		return fmt.Errorf("put.io: invalid status received %q", r.Status)
+		return newErrInvalidStatusReceived(r.Status)
 	}
 
 	return nil
@@ -216,19 +222,20 @@ func (s *rssService) Resume(ctx context.Context, id uint) error {
 
 	req, err := s.client.NewRequest(ctx, http.MethodPost, fmt.Sprintf("/v2/rss/%d/resume", id), nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("putio: cannot make request: %w", err)
 	}
+	*req = *req.WithContext(ctx)
 
 	var r struct {
 		Status string `json:"status"`
 	}
 
-	if _, err := s.client.Do(req, &r); err != nil {
-		return err
+	if _, err := s.client.Do(req, &r); err != nil { //nolint:bodyclose,contextcheck
+		return fmt.Errorf("putio: response error: %w", err)
 	}
 
 	if r.Status != "OK" {
-		return fmt.Errorf("put.io: invalid status received %q", r.Status)
+		return newErrInvalidStatusReceived(r.Status)
 	}
 
 	return nil

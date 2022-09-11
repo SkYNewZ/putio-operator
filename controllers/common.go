@@ -8,32 +8,32 @@ const finalizerAnnotation string = "feed.skynewz.dev/finalizer"
 
 const (
 	eventReconciliationStarted string = "ReconciliationStarted"
-	eventUnableToGetAuthSecret        = "UnableToGetAuthSecret"
+	eventUnableToGetAuthSecret string = "UnableToGetAuthSecret" //nolint:gosec
 
-	// finalizer events
-	eventAddedFinalizer          = "InstanceFinalizerAdded"
-	eventUnableToAddFinalizer    = "UnableToAddFinalizer"
-	eventUnableToDeleteFinalizer = "UnableToDeleteFinalizer"
+	// finalizer events.
+	eventAddedFinalizer          string = "InstanceFinalizerAdded"
+	eventUnableToAddFinalizer    string = "UnableToAddFinalizer"
+	eventUnableToDeleteFinalizer string = "UnableToDeleteFinalizer"
 
-	// creation/update events
-	eventCreateOrUpdatedAtPutio             = "CreateOrUpdatedAtPutio"
-	eventUnableToCreateOrUpdatedAtPutio     = "UnableToCreateOrUpdatedAtPutio"
-	eventSuccessfullyCreateOrUpdatedAtPutio = "SuccessfullyCreateOrUpdatedAtPutio"
+	// creation/update events.
+	eventCreateOrUpdatedAtPutio             string = "CreateOrUpdatedAtPutio"
+	eventUnableToCreateOrUpdatedAtPutio     string = "UnableToCreateOrUpdatedAtPutio"
+	eventSuccessfullyCreateOrUpdatedAtPutio string = "SuccessfullyCreateOrUpdatedAtPutio"
 
-	// deletion event
-	eventDeleteFeedAtPutio          = "DeleteFeedAtPutio"
-	eventUnableToDeleteAtPutio      = "UnableToDeleteAtPutio"
-	eventSuccessfullyDeletedAtPutio = "SuccessfullyDeletedAtPutio"
+	// deletion event.
+	eventDeleteFeedAtPutio          string = "DeleteFeedAtPutio"
+	eventUnableToDeleteAtPutio      string = "UnableToDeleteAtPutio"
+	eventSuccessfullyDeletedAtPutio string = "SuccessfullyDeletedAtPutio"
 
-	// pause status update
-	eventSetPauseStatus             = "SetPauseStatus"
-	eventUnableToSetPauseStatus     = "UnableToSetPauseStatus"
-	eventSuccessfullySetPauseStatus = "SuccessfullySetPauseStatus"
+	// pause status update.
+	eventSetPauseStatus             string = "SetPauseStatus"
+	eventUnableToSetPauseStatus     string = "UnableToSetPauseStatus"
+	eventSuccessfullySetPauseStatus string = "SuccessfullySetPauseStatus"
 
-	// status update
-	eventFeedStatus                    = "FeedStatus"
-	eventUnableToUpdateFeedStatus      = "UnableToUpdateFeedStatus"
-	eventFeedStatusSuccessfullyUpdated = "FeedStatusSuccessfullyUpdated"
+	// status update.
+	eventFeedStatus                    string = "FeedStatus"
+	eventUnableToUpdateFeedStatus      string = "UnableToUpdateFeedStatus"
+	eventFeedStatusSuccessfullyUpdated string = "FeedStatusSuccessfullyUpdated"
 )
 
 type FeedConditionType string

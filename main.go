@@ -57,6 +57,7 @@ func init() {
 	//+kubebuilder:scaffold:scheme
 }
 
+//nolint:cyclop
 func main() {
 	var (
 		configFile string
@@ -75,7 +76,7 @@ func main() {
 	flag.Parse()
 
 	if version {
-		fmt.Printf("%s %s\n", serviceName, serviceVersion)
+		fmt.Printf("%s %s\n", serviceName, serviceVersion) //nolint:forbidigo
 		os.Exit(0)
 	}
 

@@ -62,6 +62,10 @@ vet: ## Run go vet against code.
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
 
+.PHONY: lint
+lint: golangci-lint ## Run golangci-lint against code.
+	$(GOLANGCI_LINT) run --fix
+
 ##@ Build
 
 .PHONY: build
@@ -105,6 +109,7 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 .PHONY: deploy
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	cd config/default && $(KUSTOMIZE) edit set label "app.kubernetes.io/version:${VERSION}"
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
 .PHONY: undeploy
@@ -123,6 +128,7 @@ KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 IFACEMAKER ?= $(LOCALBIN)/ifacemaker
+GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v4.5.5
@@ -148,3 +154,7 @@ $(ENVTEST): $(LOCALBIN)
 ifacemaker: $(IFACEMAKER) ## Download ifacemaker locally if necessary.
 $(IFACEMAKER): $(LOCALBIN)
 	test -s $(LOCALBIN)/ifacemaker || GOBIN=$(LOCALBIN) go install github.com/vburenin/ifacemaker@latest
+
+golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
+$(GOLANGCI_LINT): $(LOCALBIN)
+	test -s $(LOCALBIN)/golangci-lint || GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.49.0

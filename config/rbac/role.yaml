@@ -6,12 +6,20 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
-  - skynewz.dev
+  - ""
   resources:
   - events
   verbs:
   - create
   - patch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
 - apiGroups:
   - skynewz.dev
   resources:

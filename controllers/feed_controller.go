@@ -42,12 +42,14 @@ import (
 )
 
 const (
-	// <wanted title>|generation|managed by Kubernetes/putio-operator
+	// <wanted title>|generation|managed by Kubernetes/putio-operator.
 	titleFormat    = "%s|%d|managed by Kubernetes/putio-operator"
 	titleSeparator = "|"
 )
 
 var tracer = otel.GetTracerProvider().Tracer("controller")
+
+var errCannotDeleteFeedWithoutID = errors.New("cannot delete Feed without its ID")
 
 // FeedReconciler reconciles a Feed object.
 type FeedReconciler struct {
@@ -59,10 +61,13 @@ type FeedReconciler struct {
 //+kubebuilder:rbac:groups=skynewz.dev,resources=feeds,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=skynewz.dev,resources=feeds/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=skynewz.dev,resources=feeds/finalizers,verbs=update
-//+kubebuilder:rbac:groups=skynewz.dev,resources=events,verbs=create;patch
+//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
+//+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
+//
+//nolint:nestif,cyclop
 func (r *FeedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	ctx, span := tracer.Start(ctx, "controllers.FeedReconciler.Reconcile")
 	defer span.End()
@@ -77,7 +82,7 @@ func (r *FeedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	// get the feed from Kubernetes
 	k8sFeed := new(skynewzdevv1alpha1.Feed)
 	if err := r.Get(ctx, req.NamespacedName, k8sFeed); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+		return ctrl.Result{}, client.IgnoreNotFound(err) //nolint:wrapcheck
 	}
 
 	r.Recorder.Event(k8sFeed, corev1.EventTypeNormal, eventReconciliationStarted, "starting reconciliation")
@@ -101,7 +106,7 @@ func (r *FeedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			if err := r.Update(ctx, k8sFeed); err != nil {
 				r.Recorder.Eventf(k8sFeed, corev1.EventTypeWarning, eventUnableToAddFinalizer, err.Error())
 				span.RecordError(err)
-				return ctrl.Result{}, err
+				return ctrl.Result{}, err //nolint:wrapcheck
 			}
 			r.Recorder.Event(k8sFeed, corev1.EventTypeNormal, eventAddedFinalizer, "feed finalizer added")
 		}
@@ -126,7 +131,7 @@ func (r *FeedReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			if err := r.Update(ctx, k8sFeed); err != nil {
 				r.Recorder.Event(k8sFeed, corev1.EventTypeWarning, eventUnableToDeleteFinalizer, err.Error())
 				span.RecordError(err)
-				return ctrl.Result{}, err
+				return ctrl.Result{}, err //nolint:wrapcheck
 			}
 		}
 
@@ -158,6 +163,7 @@ func (r *FeedReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	_, span := tracer.Start(context.Background(), "controllers.FeedReconciler.SetupWithManager")
 	defer span.End()
 
+	//nolint:wrapcheck
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&skynewzdevv1alpha1.Feed{}).
 		Complete(r)
@@ -173,11 +179,16 @@ func (r *FeedReconciler) deleteFeed(ctx context.Context, feed *skynewzdevv1alpha
 	logger.Info("Deleting feed")
 
 	if feed.Status.ID == nil {
-		return ctrl.Result{Requeue: false}, errors.New("cannot delete Feed without its ID")
+		return ctrl.Result{Requeue: false}, errCannotDeleteFeedWithoutID
 	}
 
 	span.SetAttributes(attribute.Int("feed.status.id", int(*feed.Status.ID)))
-	return ctrl.Result{RequeueAfter: time.Minute}, putioClient.Rss.Delete(ctx, *feed.Status.ID)
+
+	if err := putioClient.Rss.Delete(ctx, *feed.Status.ID); err != nil {
+		return ctrl.Result{RequeueAfter: time.Minute}, fmt.Errorf("failed to delete feed: %w", err)
+	}
+
+	return ctrl.Result{}, nil
 }
 
 func (r *FeedReconciler) createOrUpdateFeed(ctx context.Context, feed *skynewzdevv1alpha1.Feed, putioClient *putio.Client) (*putio.Feed, error) {
@@ -208,7 +219,6 @@ func (r *FeedReconciler) createOrUpdateFeed(ctx context.Context, feed *skynewzde
 		span.SetAttributes(attribute.String("action", "create"))
 		logger.Info("Put.io feed not found, creating it", "title", feed.Spec.Title)
 
-		// TODO: refacto code for creation/update, this is the same
 		putioFeed, err = putioClient.Rss.Create(ctx, makePutioFeedFromSpec(ctx, feed))
 		if err != nil {
 			span.RecordError(err)
@@ -264,7 +274,7 @@ func (r *FeedReconciler) updateFeedStatus(ctx context.Context, feed *skynewzdevv
 		meta.SetStatusCondition(&feed.Status.Conditions, makeFeedAvailableCondition(metav1.ConditionFalse, FeedFailedToDeploy, putioFeed.LastError))
 	}
 
-	return r.Client.Status().Update(ctx, feed)
+	return r.Client.Status().Update(ctx, feed) //nolint:wrapcheck
 }
 
 func (r *FeedReconciler) makePutioClient(ctx context.Context, token string) *putio.Client {
@@ -275,11 +285,12 @@ func (r *FeedReconciler) makePutioClient(ctx context.Context, token string) *put
 	return putio.New(ctx, httpClient)
 }
 
-func (r *FeedReconciler) setPauseStatus(ctx context.Context, putioClient *putio.Client, feed *skynewzdevv1alpha1.Feed, feedID uint) (err error) {
+func (r *FeedReconciler) setPauseStatus(ctx context.Context, putioClient *putio.Client, feed *skynewzdevv1alpha1.Feed, feedID uint) error {
 	ctx, span := tracer.Start(ctx, "controllers.FeedReconciler.setPauseStatus")
 	defer span.End()
 
 	r.Recorder.Event(feed, corev1.EventTypeNormal, eventSetPauseStatus, "setting feed pause status")
+	var err error
 	switch feed.Spec.Paused {
 	case true:
 		err = putioClient.Rss.Pause(ctx, feedID)
@@ -293,20 +304,20 @@ func (r *FeedReconciler) setPauseStatus(ctx context.Context, putioClient *putio.
 		r.Recorder.Event(feed, corev1.EventTypeNormal, eventSuccessfullySetPauseStatus, "feed pause status set")
 	}
 
-	return
+	return err //nolint:wrapcheck
 }
 
 // makeFeedTitleWithGenerationNumber to prevent infinite reconciliation, make a checksum of current spec
-// and place it into title
+// and place it into title.
 func makeFeedTitleWithGenerationNumber(ctx context.Context, feed *skynewzdevv1alpha1.Feed) string {
-	ctx, span := tracer.Start(ctx, "controllers.makeFeedTitleWithGenerationNumber")
+	_, span := tracer.Start(ctx, "controllers.makeFeedTitleWithGenerationNumber")
 	defer span.End()
 
 	return fmt.Sprintf(titleFormat, feed.Spec.Title, feed.GetGeneration())
 }
 
 func isAlreadyProcessed(ctx context.Context, putioFeed *putio.Feed, feed *skynewzdevv1alpha1.Feed) bool {
-	ctx, span := tracer.Start(ctx, "controllers.isAlreadyProcessed")
+	_, span := tracer.Start(ctx, "controllers.isAlreadyProcessed")
 	defer span.End()
 
 	// parse current title

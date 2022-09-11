@@ -20,7 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// AuthSecretReference references a Secret containing a Put.io authentication token
+// AuthSecretReference references a Secret containing a Put.io authentication token.
 type AuthSecretReference struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`

@@ -25,7 +25,7 @@ func (t transport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 	// insert token
 	req.Header.Set("Authorization", "Bearer "+t.token)
-	return t.RoundTripper.RoundTrip(req)
+	return t.RoundTripper.RoundTrip(req) //nolint:wrapcheck
 }
 
 func NewHTTPClient(token string) *http.Client {

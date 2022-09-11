@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/jaeger"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -38,7 +37,7 @@ func ConfigureTracing(_ context.Context, serviceName, serviceVersion string) (*s
 func makeExporter() (sdktrace.SpanExporter, error) {
 	exp, err := jaeger.New(jaeger.WithCollectorEndpoint())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("tracing: cannot init jaeger exporter: %w", err)
 	}
 
 	return exp, nil
@@ -51,7 +50,6 @@ func makeTracerProvider(serviceName, serviceVersion string, exporter sdktrace.Sp
 			semconv.SchemaURL,
 			semconv.ServiceVersionKey.String(serviceVersion),
 			semconv.ServiceNameKey.String(serviceName),
-			attribute.String("environment", "dev"), // TODO: change this
 		),
 	)
 	if err != nil {
