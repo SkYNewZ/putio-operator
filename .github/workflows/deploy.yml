@@ -72,3 +72,5 @@ jobs:
 
       - name: Install CRDs and deploy operator
         run: make deploy IMG="${{ env.REGISTRY }}/${{ steps.image.outputs.lowercase }}:${{ github.ref_name }}"
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}

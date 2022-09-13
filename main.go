@@ -25,7 +25,10 @@ import (
 
 	skynewzdevv1alpha1 "github.com/SkYNewZ/putio-operator/api/v1alpha1"
 	"github.com/SkYNewZ/putio-operator/controllers"
+	"github.com/SkYNewZ/putio-operator/internal/logger"
+	"github.com/SkYNewZ/putio-operator/internal/sentry"
 	"github.com/SkYNewZ/putio-operator/internal/tracing"
+	"github.com/go-logr/zapr"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -69,9 +72,8 @@ func main() {
 		"The controller will load its initial configuration from this file. "+
 			"Omit this flag to use the default configuration values. "+
 			"Command-line flags override configuration from this file.")
-	opts := zap.Options{
-		Development: true,
-	}
+
+	opts := zap.Options{Development: os.Getenv("DEBUG") == "1"}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
@@ -80,9 +82,30 @@ func main() {
 		os.Exit(0)
 	}
 
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+	// make the default logger for setup log
+	l := zap.NewRaw(zap.UseFlagOptions(&opts))
+	ctrl.SetLogger(zapr.NewLogger(l))
 
-	var err error
+	setupLog.Info("configure sentry")
+	sentryClient, err := sentry.ConfigureSentry(serviceName, serviceVersion)
+	if err != nil {
+		setupLog.Error(err, "unable to configure sentry")
+		os.Exit(1)
+	}
+
+	// Flush buffered events before the program terminates.
+	// Set the timeout to the maximum duration the program can afford to wait.
+	defer sentryClient.Flush(time.Second * 2)
+
+	setupLog.Info("configure logger")
+	newLogger, err := logger.ConfigureLogger(sentryClient, l)
+	if err != nil {
+		setupLog.Error(err, "unable to configure loggerRaw")
+		os.Exit(1)
+	}
+
+	ctrl.SetLogger(newLogger) // reset the final logger as default
+
 	options := ctrl.Options{Scheme: scheme}
 	if configFile != "" {
 		options, err = options.AndFrom(ctrl.ConfigFile().AtPath(configFile))
@@ -120,7 +143,7 @@ func main() {
 	setupLog.Info("configure tracer")
 	tracerProvider, err := tracing.ConfigureTracing(context.Background(), serviceName, serviceVersion)
 	if err != nil {
-		setupLog.Error(err, "problem during tracer exporter setup")
+		setupLog.Error(err, "unable to setup tracer")
 		os.Exit(1)
 	}
 

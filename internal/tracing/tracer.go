@@ -32,10 +32,11 @@ func ConfigureTracing(_ context.Context, serviceName, serviceVersion string) (*s
 }
 
 // makeExporter configures the Jaeger exporter
-// Its need OTEL_EXPORTER_JAEGER_ENDPOINT environment variable to be set, or use default value if not defined
+// - OTEL_EXPORTER_JAEGER_AGENT_HOST is used for the agent address host
+// - OTEL_EXPORTER_JAEGER_AGENT_PORT is used for the agent address port
 // See https://github.com/open-telemetry/opentelemetry-go/tree/v1.9.0/exporters/jaeger#environment-variables
 func makeExporter() (sdktrace.SpanExporter, error) {
-	exp, err := jaeger.New(jaeger.WithCollectorEndpoint())
+	exp, err := jaeger.New(jaeger.WithAgentEndpoint())
 	if err != nil {
 		return nil, fmt.Errorf("tracing: cannot init jaeger exporter: %w", err)
 	}
@@ -53,7 +54,7 @@ func makeTracerProvider(serviceName, serviceVersion string, exporter sdktrace.Sp
 		),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to configure tracer provider: %w", err)
+		return nil, fmt.Errorf("tracing: failed to configure tracer provider: %w", err)
 	}
 
 	return sdktrace.NewTracerProvider(

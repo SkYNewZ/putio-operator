@@ -10,6 +10,8 @@ kind: Deployment
 metadata:
   name: controller-manager
   namespace: system
+  annotations:
+    sidecar.jaegertracing.io/inject: "true"
   labels:
     control-plane: controller-manager
 spec:
@@ -32,6 +34,7 @@ spec:
         - command:
             - /manager
           image: controller:latest
+          imagePullPolicy: Always
           name: manager
           securityContext:
             allowPrivilegeEscalation: false
