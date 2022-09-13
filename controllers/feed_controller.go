@@ -58,9 +58,9 @@ type FeedReconciler struct {
 	Recorder record.EventRecorder
 }
 
-//+kubebuilder:rbac:groups=skynewz.dev,resources=feeds,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=skynewz.dev,resources=feeds/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=skynewz.dev,resources=feeds/finalizers,verbs=update
+//+kubebuilder:rbac:groups=putio.skynewz.dev,resources=feeds,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=putio.skynewz.dev,resources=feeds/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=putio.skynewz.dev,resources=feeds/finalizers,verbs=update
 //+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 //+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 

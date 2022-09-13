@@ -5,7 +5,7 @@ metadata:
   name: feed-editor-role
 rules:
 - apiGroups:
-  - skynewz.dev
+  - putio.skynewz.dev
   resources:
   - feeds
   verbs:
@@ -17,7 +17,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - skynewz.dev
+  - putio.skynewz.dev
   resources:
   - feeds/status
   verbs:

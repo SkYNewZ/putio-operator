@@ -5,7 +5,7 @@ metadata:
   name: feed-viewer-role
 rules:
 - apiGroups:
-  - skynewz.dev
+  - putio.skynewz.dev
   resources:
   - feeds
   verbs:
@@ -13,7 +13,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - skynewz.dev
+  - putio.skynewz.dev
   resources:
   - feeds/status
   verbs:

@@ -5,9 +5,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.9.2
   creationTimestamp: null
-  name: feeds.skynewz.dev
+  name: feeds.putio.skynewz.dev
 spec:
-  group: skynewz.dev
+  group: putio.skynewz.dev
   names:
     kind: Feed
     listKind: FeedList

@@ -1,4 +1,4 @@
-apiVersion: skynewz.dev/v1alpha1
+apiVersion: putio.skynewz.dev/v1alpha1
 kind: Feed
 metadata:
   name: for-all-mankind
@@ -16,7 +16,7 @@ spec:
     name: putio-token
 
 ---
-apiVersion: skynewz.dev/v1alpha1
+apiVersion: putio.skynewz.dev/v1alpha1
 kind: Feed
 metadata:
   name: house-of-the-dragons
@@ -34,7 +34,7 @@ spec:
     name: putio-token
 
 ---
-apiVersion: skynewz.dev/v1alpha1
+apiVersion: putio.skynewz.dev/v1alpha1
 kind: Feed
 metadata:
   name: star-trek-strange-new-worlds
