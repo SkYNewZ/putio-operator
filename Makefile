@@ -109,7 +109,10 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 .PHONY: deploy
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	cd config/default && $(KUSTOMIZE) edit set label "app.kubernetes.io/version:${VERSION}"
+
+	# Selectors are immutable and 'kustomize edit set label' render 'commonlabels'. Cannot be used to set version
+	# cd config/default && $(KUSTOMIZE) edit set label "app.kubernetes.io/version:${VERSION}"
+
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
 .PHONY: undeploy

@@ -10,7 +10,7 @@ namePrefix: putio-operator-
 
 # Labels to add to all resources and selectors.
 labels:
-- includeSelectors: true
+- includeSelectors: false
   pairs:
     app.kubernetes.io/part-of: putio-operator
     app.kubernetes.io/managed-by: kubectl

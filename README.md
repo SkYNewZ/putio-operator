@@ -9,7 +9,7 @@ Manage your [Put.io](https://app.put.io/) RSS feeds with Kubernetes Custom Resou
 Before creating an RSS feed resource, you must configure a secret containing an OAuth2 token to interact with Put.io
 API. You can get one here https://app.put.io/account/api/apps/new.
 
-Then, place the OAuth2 token into a Kubernetes secret. For example :
+Then, place the OAuth2 token into a Kubernetes secret. For example:
 
 ```
 kubectl -n default create secret generic putio-token --from-literal=token=<your oauth2 token>
@@ -19,7 +19,7 @@ Then, you can create RSS feed by specifying this secret. You can see examples [h
 .
 
 ```yaml
-apiVersion: skynewz.dev/v1alpha1
+apiVersion: putio.skynewz.dev/v1alpha1
 kind: Feed
 metadata:
   name: house-of-the-dragons
@@ -27,11 +27,8 @@ metadata:
 spec:
   keyword: "House.of.the.Dragon.S01E&.MULTi.1080p.WEB.H264-FW"
   rss_source_url: "https://rss.site.fr/rss?id=2184"
-  delete_old_files: false
   title: "House of the Dragon"
-  paused: true
   parent_dir_id: 1022542820 # 'House of the Dragon' folder
-  dont_process_whole_feed: true
   authSecretRef:
     key: putio-token
     name: token
