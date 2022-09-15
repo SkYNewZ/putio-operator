@@ -65,7 +65,7 @@ spec:
             description: FeedSpec defines the desired state of Feed.
             properties:
               authSecretRef:
-                description: Authentication reference to Put.io token in a secret
+                description: Authentication reference to Put.io token in a secret.
                 properties:
                   key:
                     minLength: 1
@@ -78,41 +78,37 @@ spec:
                 - name
                 type: object
               delete_old_files:
-                default: false
                 description: Should old files in the folder be deleted when space
-                  is low
+                  is low. Default to false.
                 type: boolean
               dont_process_whole_feed:
-                default: false
                 description: Should the current items in the feed, at creation time,
-                  be ignored
+                  be ignored.
                 type: boolean
               keyword:
                 description: Only items with titles that contain any of these words
-                  will be transferred (comma-separated list of words)
+                  will be transferred (comma-separated list of words).
                 minLength: 1
                 type: string
               parent_dir_id:
-                default: 0
                 description: The file ID of the folder to place the RSS feed files
-                  in
-                format: int32
+                  in. Default to the root directory (0).
                 type: integer
               paused:
-                default: false
-                description: Should the RSS feed be created in the paused state
+                description: Should the RSS feed be created in the paused state. Default
+                  to false.
                 type: boolean
               rss_source_url:
-                description: The URL of the RSS feed to be watched
+                description: The URL of the RSS feed to be watched.
                 minLength: 1
                 type: string
               title:
-                description: Title of the RSS feed as will appear on the site
+                description: Title of the RSS feed as will appear on the site.
                 minLength: 1
                 type: string
               unwanted_keywords:
                 description: No items with titles that contain any of these words
-                  will be transferred (comma-separated list of words)
+                  will be transferred (comma-separated list of words).
                 type: string
             required:
             - authSecretRef

@@ -31,38 +31,38 @@ type AuthSecretReference struct {
 // FeedSpec defines the desired state of Feed.
 type FeedSpec struct {
 	// +kubebuilder:validation:MinLength:=1
-	// Title of the RSS feed as will appear on the site
+	// Title of the RSS feed as will appear on the site.
 	Title string `json:"title"`
 
 	// +kubebuilder:validation:MinLength:=1
-	// The URL of the RSS feed to be watched
+	// The URL of the RSS feed to be watched.
 	RssSourceURL string `json:"rss_source_url"`
 
-	// +kubebuilder:default:=0
-	// The file ID of the folder to place the RSS feed files in
-	ParentDirID *uint32 `json:"parent_dir_id,omitempty"`
+	// The file ID of the folder to place the RSS feed files in. Default to the root directory (0).
+	// +optional
+	ParentDirID *uint `json:"parent_dir_id,omitempty"`
 
-	// +kubebuilder:default:=false
-	// Should old files in the folder be deleted when space is low
-	DeleteOldFiles bool `json:"delete_old_files,omitempty"`
+	// Should old files in the folder be deleted when space is low. Default to false.
+	// +optional
+	DeleteOldFiles *bool `json:"delete_old_files,omitempty"`
 
-	// +kubebuilder:default:=false
-	// Should the current items in the feed, at creation time, be ignored
-	DontProcessWholeFeed bool `json:"dont_process_whole_feed,omitempty"`
+	// Should the current items in the feed, at creation time, be ignored.
+	// +optional
+	DontProcessWholeFeed *bool `json:"dont_process_whole_feed,omitempty"`
 
 	// +kubebuilder:validation:MinLength:=1
-	// Only items with titles that contain any of these words will be transferred (comma-separated list of words)
+	// Only items with titles that contain any of these words will be transferred (comma-separated list of words).
 	Keyword string `json:"keyword"`
 
+	// No items with titles that contain any of these words will be transferred (comma-separated list of words).
 	// +optional
-	// No items with titles that contain any of these words will be transferred (comma-separated list of words)
 	UnwantedKeywords string `json:"unwanted_keywords,omitempty"`
 
-	// +kubebuilder:default:=false
-	// Should the RSS feed be created in the paused state
-	Paused bool `json:"paused,omitempty"`
+	// Should the RSS feed be created in the paused state. Default to false.
+	// +optional
+	Paused *bool `json:"paused,omitempty"`
 
-	// Authentication reference to Put.io token in a secret
+	// Authentication reference to Put.io token in a secret.
 	AuthSecretRef AuthSecretReference `json:"authSecretRef"`
 }
 
@@ -94,8 +94,8 @@ type Feed struct {
 	Status FeedStatus `json:"status,omitempty"`
 }
 
-func (in *Feed) AuthSecretRef() AuthSecretReference {
-	return in.Spec.AuthSecretRef
+func (r *Feed) AuthSecretRef() AuthSecretReference {
+	return r.Spec.AuthSecretRef
 }
 
 //+kubebuilder:object:root=true

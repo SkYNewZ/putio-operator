@@ -11,7 +11,7 @@ import (
 )
 
 func Test_makePutioFeedFromSpec(t *testing.T) {
-	parentDirID := uint32(1234)
+	parentDirID := uint(1234)
 
 	type args struct {
 		ctx  context.Context
@@ -33,8 +33,8 @@ func Test_makePutioFeedFromSpec(t *testing.T) {
 						Title:                "foo",
 						RssSourceURL:         "https://www.google.com",
 						ParentDirID:          &parentDirID,
-						DeleteOldFiles:       true,
-						DontProcessWholeFeed: true,
+						DeleteOldFiles:       boolToPtr(true),
+						DontProcessWholeFeed: boolToPtr(true),
 						Keyword:              "foo",
 						UnwantedKeywords:     "bar",
 						// Paused:               true, // Pause is not handle during creation/update
@@ -47,7 +47,7 @@ func Test_makePutioFeedFromSpec(t *testing.T) {
 				ID:                   nil,
 				Title:                "foo|0|managed by Kubernetes/putio-operator",
 				RssSourceURL:         "https://www.google.com",
-				ParentDirID:          &parentDirID,
+				ParentDirID:          parentDirID,
 				DeleteOldFiles:       true,
 				DontProcessWholeFeed: true,
 				Keyword:              "foo",
@@ -101,11 +101,11 @@ func Test_makeFeedTitleWithGenerationNumber(t *testing.T) {
 						Title:                "foo",
 						RssSourceURL:         "",
 						ParentDirID:          nil,
-						DeleteOldFiles:       false,
-						DontProcessWholeFeed: false,
+						DeleteOldFiles:       new(bool),
+						DontProcessWholeFeed: new(bool),
 						Keyword:              "",
 						UnwantedKeywords:     "",
-						Paused:               false,
+						Paused:               new(bool),
 						AuthSecretRef:        skynewzdevv1alpha1.AuthSecretReference{},
 					},
 					Status: skynewzdevv1alpha1.FeedStatus{},
@@ -142,7 +142,7 @@ func Test_isAlreadyProcessed(t *testing.T) {
 					ID:                   nil,
 					Title:                "foo|1234|managed by Kubernetes/putio-operator",
 					RssSourceURL:         "",
-					ParentDirID:          nil,
+					ParentDirID:          0,
 					DeleteOldFiles:       false,
 					DontProcessWholeFeed: false,
 					Keyword:              "",
@@ -176,7 +176,7 @@ func Test_isAlreadyProcessed(t *testing.T) {
 					ID:                   nil,
 					Title:                "foo|4321|managed by Kubernetes/putio-operator",
 					RssSourceURL:         "",
-					ParentDirID:          nil,
+					ParentDirID:          0,
 					DeleteOldFiles:       false,
 					DontProcessWholeFeed: false,
 					Keyword:              "",
@@ -210,4 +210,8 @@ func Test_isAlreadyProcessed(t *testing.T) {
 			}
 		})
 	}
+}
+
+func boolToPtr(v bool) *bool {
+	return &v
 }

@@ -57,13 +57,6 @@ jobs:
       - name: Run tests
         run: make test
 
-  integration-tests:
-    runs-on: ubuntu-latest
-    name: Kubernetes tests
-    steps:
-      - name: Setup kind
-        run: echo "Running integration tests"
-
   lint:
     runs-on: ubuntu-latest
     name: Go lint

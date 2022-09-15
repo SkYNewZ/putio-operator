@@ -23,15 +23,16 @@ import (
 	"os"
 	"time"
 
-	skynewzdevv1alpha1 "github.com/SkYNewZ/putio-operator/api/v1alpha1"
-	"github.com/SkYNewZ/putio-operator/controllers"
-	"github.com/SkYNewZ/putio-operator/internal/logger"
-	"github.com/SkYNewZ/putio-operator/internal/sentry"
-	"github.com/SkYNewZ/putio-operator/internal/tracing"
 	"github.com/go-logr/zapr"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+
+	putiov1alpha1 "github.com/SkYNewZ/putio-operator/api/v1alpha1"
+	"github.com/SkYNewZ/putio-operator/controllers"
+	"github.com/SkYNewZ/putio-operator/internal/logger"
+	"github.com/SkYNewZ/putio-operator/internal/sentry"
+	"github.com/SkYNewZ/putio-operator/internal/tracing"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -56,7 +57,7 @@ const (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	utilruntime.Must(skynewzdevv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(putiov1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -127,6 +128,10 @@ func main() {
 		Recorder: mgr.GetEventRecorderFor("feed-reconciler"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Feed")
+		os.Exit(1)
+	}
+	if err = (&putiov1alpha1.Feed{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "Feed")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

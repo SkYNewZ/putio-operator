@@ -291,7 +291,7 @@ func (r *FeedReconciler) setPauseStatus(ctx context.Context, putioClient *putio.
 
 	r.Recorder.Event(feed, corev1.EventTypeNormal, eventSetPauseStatus, "setting feed pause status")
 	var err error
-	switch feed.Spec.Paused {
+	switch *feed.Spec.Paused {
 	case true:
 		err = putioClient.Rss.Pause(ctx, feedID)
 	case false:
@@ -336,9 +336,9 @@ func makePutioFeedFromSpec(ctx context.Context, feed *skynewzdevv1alpha1.Feed) *
 	return &putio.Feed{
 		Title:                makeFeedTitleWithGenerationNumber(ctx, feed),
 		RssSourceURL:         feed.Spec.RssSourceURL,
-		ParentDirID:          feed.Spec.ParentDirID,
-		DeleteOldFiles:       feed.Spec.DeleteOldFiles,
-		DontProcessWholeFeed: feed.Spec.DontProcessWholeFeed,
+		ParentDirID:          *feed.Spec.ParentDirID,
+		DeleteOldFiles:       *feed.Spec.DeleteOldFiles,
+		DontProcessWholeFeed: *feed.Spec.DontProcessWholeFeed,
 		Keyword:              feed.Spec.Keyword,
 		UnwantedKeywords:     feed.Spec.UnwantedKeywords,
 	}

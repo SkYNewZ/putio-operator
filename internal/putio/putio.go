@@ -114,16 +114,11 @@ func (s *rssService) Create(ctx context.Context, feed *Feed) (*Feed, error) {
 	params := url.Values{}
 	params.Set("title", feed.Title)
 	params.Set("rss_source_url", feed.RssSourceURL)
-	params.Set("keyword", feed.Keyword)
-	params.Set("unwanted_keywords", feed.UnwantedKeywords)
-
+	params.Set("parent_dir_id", strconv.Itoa(int(feed.ParentDirID)))
 	params.Set("delete_old_files", boolToString(feed.DeleteOldFiles))
 	params.Set("dont_process_whole_feed", boolToString(feed.DontProcessWholeFeed))
-	params.Set("paused", boolToString(feed.Paused))
-
-	if v := feed.ParentDirID; v != nil {
-		params.Set("parent_dir_id", strconv.Itoa(int(*v)))
-	}
+	params.Set("keyword", feed.Keyword)
+	params.Set("unwanted_keywords", feed.UnwantedKeywords)
 
 	req, err := s.client.NewRequest(ctx, http.MethodPost, "/v2/rss/create", strings.NewReader(params.Encode()))
 	if err != nil {
@@ -153,15 +148,11 @@ func (s *rssService) Update(ctx context.Context, feed *Feed, id uint) error {
 	params := url.Values{}
 	params.Set("title", feed.Title)
 	params.Set("rss_source_url", feed.RssSourceURL)
-	params.Set("keyword", feed.Keyword)
-	params.Set("unwanted_keywords", feed.UnwantedKeywords)
-
+	params.Set("parent_dir_id", strconv.Itoa(int(feed.ParentDirID)))
 	params.Set("delete_old_files", boolToString(feed.DeleteOldFiles))
 	params.Set("dont_process_whole_feed", boolToString(feed.DontProcessWholeFeed))
-
-	if v := feed.ParentDirID; v != nil {
-		params.Set("parent_dir_id", strconv.Itoa(int(*v)))
-	}
+	params.Set("keyword", feed.Keyword)
+	params.Set("unwanted_keywords", feed.UnwantedKeywords)
 
 	req, err := s.client.NewRequest(ctx, http.MethodPost, fmt.Sprintf("/v2/rss/%d", id), strings.NewReader(params.Encode()))
 	if err != nil {

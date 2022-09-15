@@ -71,13 +71,12 @@ func Test_rssService_List(t *testing.T) {
 			args: args{context.Background()},
 			want: func() []*Feed {
 				feedID := uint(125559)
-				parentDirID := uint32(998868232)
 				return []*Feed{
 					{
 						ID:                   &feedID,
 						Title:                "For all mankind",
 						RssSourceURL:         "https://rss.site.fr",
-						ParentDirID:          &parentDirID,
+						ParentDirID:          998868232,
 						DeleteOldFiles:       false,
 						DontProcessWholeFeed: false,
 						Keyword:              "FOR.ALL.MANKIND&S03&2160P&FRATERNITY",
@@ -149,12 +148,11 @@ func Test_rssService_Get(t *testing.T) {
 			},
 			want: func() *Feed {
 				feedID := uint(125559)
-				parentDirID := uint32(998868232)
 				return &Feed{
 					ID:                   &feedID,
 					Title:                "For all mankind",
 					RssSourceURL:         "https://rss.site.fr",
-					ParentDirID:          &parentDirID,
+					ParentDirID:          998868232,
 					DeleteOldFiles:       false,
 					DontProcessWholeFeed: false,
 					Keyword:              "FOR.ALL.MANKIND&S03&2160P&FRATERNITY",

@@ -28,15 +28,15 @@ func (t *Time) GetTime() time.Time {
 }
 
 type Feed struct {
-	ID                   *uint   `json:"id"`
-	Title                string  `json:"title"`
-	RssSourceURL         string  `json:"rss_source_url"`
-	ParentDirID          *uint32 `json:"parent_dir_id"`
-	DeleteOldFiles       bool    `json:"delete_old_files"`
-	DontProcessWholeFeed bool    `json:"dont_process_whole_feed"`
-	Keyword              string  `json:"keyword"`
-	UnwantedKeywords     string  `json:"unwanted_keywords"`
-	Paused               bool    `json:"paused"`
+	ID                   *uint  `json:"id"`
+	Title                string `json:"title"`
+	RssSourceURL         string `json:"rss_source_url"`
+	ParentDirID          uint   `json:"parent_dir_id"`
+	DeleteOldFiles       bool   `json:"delete_old_files"`
+	DontProcessWholeFeed bool   `json:"dont_process_whole_feed"`
+	Keyword              string `json:"keyword"`
+	UnwantedKeywords     string `json:"unwanted_keywords"`
+	Paused               bool   `json:"paused"`
 
 	Extract         bool   `json:"extract"`
 	FailedItemCount uint   `json:"failed_item_count"`
