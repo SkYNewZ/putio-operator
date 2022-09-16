@@ -56,6 +56,9 @@ jobs:
 
       - name: Run tests
         run: make test
+        env:
+          PUTIO_TESTING_OAUTH_TOKEN: ${{ secrets.PUTIO_TESTING_OAUTH_TOKEN }}
+          ACK_GINKGO_DEPRECATIONS: "1.16.5"
 
   lint:
     runs-on: ubuntu-latest
