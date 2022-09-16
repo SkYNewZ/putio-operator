@@ -21,6 +21,7 @@ import (
 	"net/url"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -55,6 +56,7 @@ func (r *Feed) Default() {
 	_, span := tracer.Start(context.Background(), "v1alpha1.Feed.Default")
 	defer span.End()
 
+	span.SetAttributes(attribute.String("name", r.Name))
 	feedlog.Info("default", "name", r.Name)
 
 	if r.Spec.ParentDirID == nil {
@@ -84,6 +86,7 @@ func (r *Feed) ValidateCreate() error {
 	_, span := tracer.Start(context.Background(), "v1alpha1.Feed.ValidateCreate")
 	defer span.End()
 
+	span.SetAttributes(attribute.String("name", r.Name))
 	feedlog.Info("validate create", "name", r.Name)
 	return r.validateFeedSpec()
 }
@@ -93,6 +96,7 @@ func (r *Feed) ValidateUpdate(_ runtime.Object) error {
 	_, span := tracer.Start(context.Background(), "v1alpha1.Feed.ValidateUpdate")
 	defer span.End()
 
+	span.SetAttributes(attribute.String("name", r.Name))
 	feedlog.Info("validate update", "name", r.Name)
 	return r.validateFeedSpec()
 }
@@ -102,6 +106,7 @@ func (r *Feed) ValidateDelete() error {
 	_, span := tracer.Start(context.Background(), "v1alpha1.Feed.ValidateDelete")
 	defer span.End()
 
+	span.SetAttributes(attribute.String("name", r.Name))
 	feedlog.Info("validate delete", "name", r.Name)
 	return nil // nothing to validate on deletion
 }
