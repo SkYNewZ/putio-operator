@@ -10,7 +10,7 @@ import (
 type RssService interface {
 	// List RSS feeds.
 	List(ctx context.Context) ([]*Feed, error)
-	// Get a RSS feed.
+	// Get an RSS feed.
 	Get(ctx context.Context, id uint) (*Feed, error)
 	// Delete a RSS feed.
 	Delete(ctx context.Context, id uint) error

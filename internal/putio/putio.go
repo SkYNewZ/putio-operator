@@ -47,12 +47,11 @@ func (s *rssService) List(ctx context.Context) ([]*Feed, error) {
 	if err != nil {
 		return nil, fmt.Errorf("putio: cannot make request: %w", err)
 	}
-	*req = *req.WithContext(ctx)
 
 	var r struct {
 		Feeds []*Feed `json:"feeds"`
 	}
-	_, err = s.client.Do(req, &r) //nolint:bodyclose,contextcheck
+	_, err = s.client.Do(req, &r) //nolint:bodyclose
 	if err != nil {
 		return nil, fmt.Errorf("putio: response error: %w", err)
 	}
@@ -60,7 +59,7 @@ func (s *rssService) List(ctx context.Context) ([]*Feed, error) {
 	return r.Feeds, nil
 }
 
-// Get a RSS feed.
+// Get an RSS feed.
 func (s *rssService) Get(ctx context.Context, id uint) (*Feed, error) {
 	ctx, span := s.client.tracer.Start(ctx, "putio.rssService.Get")
 	defer span.End()
@@ -71,12 +70,11 @@ func (s *rssService) Get(ctx context.Context, id uint) (*Feed, error) {
 	if err != nil {
 		return nil, fmt.Errorf("putio: cannot make request: %w", err)
 	}
-	*req = *req.WithContext(ctx)
 
 	var r struct {
 		Feed *Feed `json:"feed"`
 	}
-	_, err = s.client.Do(req, &r) //nolint:bodyclose,contextcheck
+	_, err = s.client.Do(req, &r) //nolint:bodyclose
 	if err != nil {
 		return nil, fmt.Errorf("putio: response error: %w", err)
 	}
@@ -95,9 +93,8 @@ func (s *rssService) Delete(ctx context.Context, id uint) error {
 	if err != nil {
 		return fmt.Errorf("putio: cannot make request: %w", err)
 	}
-	*req = *req.WithContext(ctx)
 
-	_, err = s.client.Do(req, nil) //nolint:bodyclose,contextcheck
+	_, err = s.client.Do(req, nil) //nolint:bodyclose
 	if err != nil {
 		return fmt.Errorf("putio: response error: %w", err)
 	}
@@ -124,13 +121,12 @@ func (s *rssService) Create(ctx context.Context, feed *Feed) (*Feed, error) {
 	if err != nil {
 		return nil, fmt.Errorf("putio: cannot make request: %w", err)
 	}
-	*req = *req.WithContext(ctx)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	var r struct {
 		Feed *Feed `json:"feed"`
 	}
-	_, err = s.client.Do(req, &r) //nolint:bodyclose,contextcheck
+	_, err = s.client.Do(req, &r) //nolint:bodyclose
 	if err != nil {
 		return nil, fmt.Errorf("putio: response error: %w", err)
 	}
@@ -158,14 +154,13 @@ func (s *rssService) Update(ctx context.Context, feed *Feed, id uint) error {
 	if err != nil {
 		return fmt.Errorf("putio: cannot make request: %w", err)
 	}
-	*req = *req.WithContext(ctx)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	var r struct {
 		Status string `json:"status"`
 	}
 
-	if _, err := s.client.Do(req, &r); err != nil { //nolint:bodyclose,contextcheck
+	if _, err := s.client.Do(req, &r); err != nil { //nolint:bodyclose
 		return fmt.Errorf("putio: response error: %w", err)
 	}
 
@@ -187,13 +182,12 @@ func (s *rssService) Pause(ctx context.Context, id uint) error {
 	if err != nil {
 		return fmt.Errorf("putio: cannot make request: %w", err)
 	}
-	*req = *req.WithContext(ctx)
 
 	var r struct {
 		Status string `json:"status"`
 	}
 
-	if _, err := s.client.Do(req, &r); err != nil { //nolint:bodyclose,contextcheck
+	if _, err := s.client.Do(req, &r); err != nil { //nolint:bodyclose
 		return fmt.Errorf("putio: response error: %w", err)
 	}
 
@@ -215,13 +209,12 @@ func (s *rssService) Resume(ctx context.Context, id uint) error {
 	if err != nil {
 		return fmt.Errorf("putio: cannot make request: %w", err)
 	}
-	*req = *req.WithContext(ctx)
 
 	var r struct {
 		Status string `json:"status"`
 	}
 
-	if _, err := s.client.Do(req, &r); err != nil { //nolint:bodyclose,contextcheck
+	if _, err := s.client.Do(req, &r); err != nil { //nolint:bodyclose
 		return fmt.Errorf("putio: response error: %w", err)
 	}
 
