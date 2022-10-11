@@ -1,6 +1,8 @@
 domain: skynewz.dev
 layout:
 - go.kubebuilder.io/v4-alpha
+plugins:
+  grafana.kubebuilder.io/v1-alpha: {}
 projectName: putio-operator
 repo: github.com/SkYNewZ/putio-operator
 resources:
